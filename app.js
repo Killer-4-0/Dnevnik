@@ -290,7 +290,7 @@ function switchTab(tab) {
   $$(".view").forEach(v => v.classList.remove("active"));
   $("#view-" + tab).classList.add("active");
   $$(".tabbar button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
-  const subs = { diary: "Питание · КБЖУ · Вода", workouts: "Тренировки и планы", progress: "Графики и прогноз", mealplan: "Планирование рациона", settings: "Настройки и синхронизация" };
+  const subs = { diary: "Питание · КБЖУ · Вода", workouts: "Тренировки и планы", progress: "Графики и прогноз", mealplan: "Планирование рациона", settings: "Настройки и синхронизация", api: "Проверка API ключа" };
   $("#headerSub").textContent = subs[tab] || "";
   renderAll();
   window.scrollTo({ top: 0 });
@@ -2349,9 +2349,73 @@ function updateSyncDot() {
 const _origRenderSync = renderSyncSection;
 renderSyncSection = function () { _origRenderSync(); updateSyncDot(); };
 
+/* ================= API ЧАТ ================= */
+function initApiChat() {
+  const sendBtn = $("#chatSendBtn");
+  const input = $("#chatInput");
+  const messages = $("#chatMessages");
+  const apiKeyInput = $("#apiKeyInput");
+  const apiUrlInput = $("#apiUrlInput");
+  const modelSelect = $("#apiModelSelect");
+  if (!sendBtn || !input || !messages) return;
+  let chatHistory = [];
+  sendBtn.addEventListener("click", sendChat);
+  input.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } });
+  function addMsg(role, text, isErr) {
+    const div = document.createElement("div");
+    div.className = "msg " + (isErr ? "err" : role);
+    div.textContent = text;
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+    const hint = messages.querySelector('div[style*="text-align:center"]');
+    if (hint) hint.remove();
+  }
+  async function sendChat() {
+    const apiKey = apiKeyInput.value.trim();
+    const apiUrl = apiUrlInput.value.trim() || "https://api.munito.ai/inference/v1";
+    const model = modelSelect.value;
+    const text = input.value.trim();
+    if (!apiKey) { addMsg("err", "⚠️ Вставьте API ключ"); return; }
+    if (!text) return;
+    input.value = "";
+    addMsg("user", text);
+    chatHistory.push({ role: "user", content: text });
+    sendBtn.disabled = true;
+    sendBtn.textContent = "...";
+    try {
+      const res = await fetch(apiUrl + "/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + apiKey
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: chatHistory,
+          stream: false
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error?.message || "Ошибка API: " + res.status);
+      }
+      const reply = data.choices?.[0]?.message?.content || JSON.stringify(data, null, 2);
+      chatHistory.push({ role: "assistant", content: reply });
+      addMsg("ai", reply);
+    } catch (err) {
+      addMsg("err", "❌ " + err.message);
+    } finally {
+      sendBtn.disabled = false;
+      sendBtn.textContent = "→";
+    }
+  }
+}
+
 /* ================= СТАРТ ================= */
 window.addEventListener("online", () => { if (fbUser && data.settings.autoSync) syncPush(true); });
 if (data.settings.firebaseConfig || (typeof window.FB_CONFIG === "object" && window.FB_CONFIG)) initFirebase(true);
 // если данные мигрированы из v1 — сразу сохраняем в новый ключ
 if (!store.getItem(STORAGE_KEY) && store.getItem(OLD_KEY)) persist();
 switchTab("diary");
+/* ================= ЗАПУСК API ЧАТА ================= */
+initApiChat();

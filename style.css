@@ -334,6 +334,12 @@ details.help pre { background: var(--panel-2); padding: 10px; border-radius: 8px
 }
 
 /* ---------- Тренировка: запись подходов ---------- */
+/* ======== Проверка API ======== */
+#chatMessages .msg { padding: 10px 14px; border-radius: 14px; max-width: 85%; word-wrap: break-word; white-space: pre-wrap; }
+#chatMessages .msg.user { align-self: flex-end; background: var(--accent-dark); color: #fff; }
+#chatMessages .msg.ai { align-self: flex-start; background: var(--panel-3); }
+#chatMessages .msg.err { align-self: center; background: var(--danger-bg); color: var(--danger); max-width: 95%; font-size: 13px; }
+#chatSendBtn { min-width: 48px; font-size: 18px; }
 .ts-ex { border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 10px; background: var(--panel-2); cursor: default; transition: opacity 0.2s, border-color 0.2s; }
 .ts-ex:active { cursor: grabbing; }
 .ts-ex-head b { cursor: grab; user-select: none; }
